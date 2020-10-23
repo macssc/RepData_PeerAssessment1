@@ -7,19 +7,110 @@ output:
 
 
 ## Loading and preprocessing the data
-
+```{r}
+df <- read.csv(unz('activity.zip', 'activity.csv'))
+noNA <- na.omit(df)
+head(df)
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r}
+# Remove NA
+total <- aggregate(noNA$steps, by=list(noNA$date), FUN=sum)
+names(total) <- c('date', 'steps')
+total$date <- as.Date(as.character(total$date), '%Y-%m-%d')
+```
 
+The total number of steps per day are:
+```{r}
+total
+```
+
+In histogram form:
+```{r}
+hist(total$steps, main='Total number of steps per day', xlab='Steps per day')
+```
+
+The mean total number of steps per day is:
+```{r}
+mean(total$steps)
+```
+
+The median total number of steps per day is:
+```{r}
+median(total$steps)
+```
 
 
 ## What is the average daily activity pattern?
 
+```{r}
+# assuming we can still ignore NAs
+averages <- aggregate(noNA$steps, by=list(noNA$interval), FUN=mean)
+names(averages) <- c('interval', 'steps')
+plot(averages, type='l', main='Average number of steps per interval')
+```
 
+The interval with the maximum average number of steps is:
+```{r}
+averages$interval[which.max(averages$steps)]
+```
 
-## Imputing missing values
+## Inputing missing values
+The number of rows with missing values is:
+```{r}
+sum(is.na(df))
+```
 
+Fill missing values with the average amount of steps in an interval
+```{r}
+library(dplyr)
+filled <- df %>% mutate_at(vars(steps), ~ifelse(is.na(.), mean(., na.rm=TRUE), .))
+```
 
+In histogram form:
+```{r}
+total <- aggregate(filled$steps, by=list(filled$date), FUN=sum)
+names(total) <- c('date', 'steps')
+hist(total$steps, main='Total number of steps per day', xlab='Steps per day')
+```
+
+The mean total number of steps per day is:
+```{r}
+mean(total$steps)
+```
+
+The median total number of steps per day is:
+```{r}
+median(total$steps)
+```
+
+We can see that the average and median is very similar but we can see that the frequency of days where between 10000 and 15000 steps were made increased.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+# Add new factor
+filled$date <- as.Date(as.character(filled$date), '%Y-%m-%d')
+weekdaysStr <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+filled$day <- factor(weekdays(filled$date) %in% weekdaysStr, labels=c('weekend', 'weekday'))
+
+# Compute weekday averages
+week <- subset(filled, day == 'weekday')
+avgWeek <- aggregate(week$steps, by=list(week$interval), FUN=mean)
+names(avgWeek) <- c('interval', 'steps')
+
+# Compute weekend averages
+weekend <- subset(filled, day == 'weekend')
+avgWeekend <- aggregate(weekend$steps, by=list(weekend$interval), FUN=mean)
+names(avgWeekend) <- c('interval', 'steps')
+
+# Build the plot
+par(mfrow=c(2,1))
+plot(avgWeek, type='l', ylab='Number of steps')
+plot(avgWeekend, type='l')
+
+
+```
+
